@@ -33,7 +33,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -41,6 +40,8 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.crashlytics.android.Crashlytics;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -49,6 +50,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.joanzapata.iconify.IconDrawable;
 import com.joanzapata.iconify.Iconify;
 import com.joanzapata.iconify.fonts.FontAwesomeIcons;
@@ -66,9 +68,10 @@ import in.co.rajkumaar.amritarepo.downloads.DownloadsActivity;
 import in.co.rajkumaar.amritarepo.downloads.FTPActivity;
 import in.co.rajkumaar.amritarepo.examschedule.ExamCategoryActivity;
 import in.co.rajkumaar.amritarepo.faq.ExamsFAQActivity;
+import in.co.rajkumaar.amritarepo.helpers.ClearCache;
 import in.co.rajkumaar.amritarepo.helpers.Utils;
-import in.co.rajkumaar.amritarepo.helpers.clearCache;
 import in.co.rajkumaar.amritarepo.news.NewsActivity;
+import in.co.rajkumaar.amritarepo.notifications.NotificationsActivity;
 import in.co.rajkumaar.amritarepo.opac.OPACHomeActivity;
 import in.co.rajkumaar.amritarepo.papers.SemesterActivity;
 import in.co.rajkumaar.amritarepo.study_materials.StudyMaterialsActivity;
@@ -76,16 +79,12 @@ import in.co.rajkumaar.amritarepo.timetable.AcademicTimetableActivity;
 import in.co.rajkumaar.amritarepo.timetable.FacultyTimetableActivity;
 import in.co.rajkumaar.amritarepo.timings.TimingsHomeActivity;
 import in.co.rajkumaar.amritarepo.wifistatus.WifiStatusActivity;
-import nl.dionsegijn.konfetti.KonfettiView;
-import nl.dionsegijn.konfetti.ParticleSystem;
-import nl.dionsegijn.konfetti.models.Shape;
-import nl.dionsegijn.konfetti.models.Size;
 
-public class LaunchingActivity extends AppCompatActivity
+public class LaunchingActivity extends BaseActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    static boolean active = false;
-    boolean doubleBackToExitPressedOnce = false;
+    private static boolean active = false;
+    private boolean doubleBackToExitPressedOnce = false;
     private FirebaseAnalytics mFirebaseAnalytics;
 
     @SuppressLint("SetTextI18n")
@@ -106,7 +105,7 @@ public class LaunchingActivity extends AppCompatActivity
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     1);
         } else {
-            new clearCache().clear(this);
+            new ClearCache().clear(this);
             if (pref.getBoolean("first", true)) {
                 AboutActivity.showDisclaimer(this);
                 SharedPreferences.Editor editor = getSharedPreferences("user", MODE_PRIVATE).edit();
@@ -114,7 +113,6 @@ public class LaunchingActivity extends AppCompatActivity
                 editor.apply();
             }
         }
-        overridePendingTransition(R.anim.abc_fade_in, R.anim.abc_fade_out);
 
         if (pref.getInt("visit", 0) >= 3 && pref.getBoolean("ftp-dialog", true)) {
             final Dialog dialog = new Dialog(this);
@@ -132,19 +130,22 @@ public class LaunchingActivity extends AppCompatActivity
             pref.edit().putInt("visit", pref.getInt("visit", 0) + 1).apply();
         }
 
+
+        //Subscribing to a topic to receive FCM Topic messages
+        if (!pref.getBoolean(getString(R.string.subsribedToTopic), false)) {
+            FirebaseMessaging.getInstance().subscribeToTopic("general")
+                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful()) {
+                                pref.edit().putBoolean(getString(R.string.subsribedToTopic), true).apply();
+                            }
+                        }
+                    });
+        }
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-//        toolbar.setSubtitle(Html.fromHtml("Crafted with &hearts; by Rajkumar"));
-        toolbar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String url = "http://rajkumaar.co.in";
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse(url));
-                startActivity(i);
-            }
-        });
-
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
@@ -160,74 +161,6 @@ public class LaunchingActivity extends AppCompatActivity
         navigationView.getMenu().getItem(0).setChecked(true);
 
         initialize();
-        if (!getSharedPreferences("confetti", MODE_PRIVATE).getBoolean("shown", false)) {
-            showCelebs();
-            getSharedPreferences("confetti", MODE_PRIVATE).edit().putBoolean("shown", true).apply();
-        } else {
-            if (!pref.getBoolean("ftp-dialog", false) && !pref.getBoolean("first", true) && !pref.getBoolean("feedback-done", true)) {
-                String feedbackText = "Hello there, your opinion matters.<br>Could you please spend a minute to leave feedback on your experience? <br>I appreciate your help! &hearts;";
-                try {
-                    final AlertDialog.Builder feedbackDialog = new AlertDialog.Builder(LaunchingActivity.this);
-                    feedbackDialog.setMessage(Html.fromHtml(feedbackText));
-                    feedbackDialog.setPositiveButton("Sure", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setData(Uri.parse("https://rajkumaar.co.in/repo-feedback"));
-                            pref.edit().putBoolean("feedback-done", true).apply();
-                            if (intent.resolveActivity(getPackageManager()) != null)
-                                startActivity(intent);
-                        }
-                    });
-                    feedbackDialog.setNegativeButton("Never", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            pref.edit().putBoolean("feedback-done", true).apply();
-                            dialogInterface.dismiss();
-                        }
-                    });
-                    feedbackDialog.setNeutralButton("Remind me later", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                        }
-                    });
-                    feedbackDialog.show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private void showCelebs() {
-        ParticleSystem konfettiView = ((KonfettiView) findViewById(R.id.container)).build();
-        konfettiView.addColors(Color.YELLOW, Color.GREEN, Color.MAGENTA)
-                .setDirection(359.0, 0.0)
-                .setSpeed(1f, 5f)
-                .setFadeOutEnabled(true)
-                .setTimeToLive(3000L)
-                .addShapes(Shape.RECT, Shape.CIRCLE)
-                .addSizes(new Size(8, 2f))
-                .setPosition(-50f, findViewById(R.id.container).getWidth() + 5000f, -50f, -50f)
-                .streamFor(400, 5000L);
-
-        final Dialog thanksGiving = new Dialog(LaunchingActivity.this);
-        thanksGiving.setContentView(R.layout.thanks_dialog);
-        thanksGiving.setCancelable(false);
-        TextView textView = thanksGiving.findViewById(R.id.update_text);
-        textView.setText(Html.fromHtml("Amrita Repository <br>celebrates 7000+ downloads in Play Store. <br>Thanks for being an active user. &hearts;<br><br>I’m convinced that the only thing that kept me going was that I loved what I did. You’ve got to find what you love.<br>- Steve Jobs"));
-        thanksGiving.show();
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    thanksGiving.setCancelable(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, 3000);
     }
 
     private void initialize() {
@@ -419,6 +352,8 @@ public class LaunchingActivity extends AppCompatActivity
             case "Support":
                 startActivity(new Intent(getBaseContext(), SupportActivity.class));
                 break;
+            default:
+                break;
         }
     }
 
@@ -432,7 +367,7 @@ public class LaunchingActivity extends AppCompatActivity
 
     @Override
     protected void onDestroy() {
-        new clearCache().clear(this);
+        new ClearCache().clear(this);
         super.onDestroy();
     }
 
@@ -534,6 +469,8 @@ public class LaunchingActivity extends AppCompatActivity
             startActivity(new Intent(this, AboutActivity.class));
         } else if (id == R.id.action_download) {
             startActivity(new Intent(this, DownloadsActivity.class));
+        } else if (id == R.id.notifications) {
+            startActivity(new Intent(this, NotificationsActivity.class));
         }
         return super.onOptionsItemSelected(item);
     }
@@ -663,17 +600,15 @@ public class LaunchingActivity extends AppCompatActivity
             items.add(new Item("#FF201B", "Question Papers", FontAwesomeIcons.fa_paper_plane));
             items.add(new Item("#009688", "AUMS", FontAwesomeIcons.fa_graduation_cap));
             items.add(new Item("#a4123f", "CMS", FontAwesomeIcons.fa_university));
-            items.add(new Item("#ffc107", "Academic Timetable", FontAwesomeIcons.fa_calendar));
+            items.add(new Item("#9c27b0", "Academic Timetable", FontAwesomeIcons.fa_calendar));
             items.add(new Item("#e91e63", "Faculty Timetable", FontAwesomeIcons.fa_users));
             items.add(new Item("#03a9f4", "Central Library", FontAwesomeIcons.fa_laptop));
             items.add(new Item("#3f51b5", "Curriculum", FontAwesomeIcons.fa_paperclip));
             items.add(new Item("#fe5352", "Exam Schedule", FontAwesomeIcons.fa_pencil));
-            items.add(new Item("#ffffff", "Timings", FontAwesomeIcons.fa_clock_o));
+            items.add(new Item("#009688", "Timings", FontAwesomeIcons.fa_clock_o));
             items.add(new Item("#9c27b0", "News", FontAwesomeIcons.fa_newspaper_o));
             items.add(new Item("#03a9f4", "Study Materials", FontAwesomeIcons.fa_book));
             items.add(new Item("#259b24", "Downloads", FontAwesomeIcons.fa_download));
-//            items.add(new Item("#03a9f4", "WiFi Status", FontAwesomeIcons.fa_wifi));
-//            items.add(new Item("#116466", "FAQ - Exams", FontAwesomeIcons.fa_question_circle));
             items.add(new Item("#f13c20", "Support", FontAwesomeIcons.fa_dollar));
             items.add(new Item("#259b24", "About", FontAwesomeIcons.fa_info_circle));
         }
@@ -711,7 +646,6 @@ public class LaunchingActivity extends AppCompatActivity
             final Item item = (Item) getItem(i);
             picture.setImageDrawable(new IconDrawable(context, item.image).color(Color.parseColor(item.color)));
             name.setText(item.name);
-            //holder.setBackgroundColor(Color.parseColor(item.color));
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

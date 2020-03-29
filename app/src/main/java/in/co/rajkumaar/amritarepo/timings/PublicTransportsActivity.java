@@ -1,25 +1,5 @@
 /*
- * MIT License
- *
- * Copyright (c) 2018  RAJKUMAR S
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * Copyright (c) 2020 RAJKUMAR S
  */
 
 package in.co.rajkumaar.amritarepo.timings;
@@ -30,13 +10,7 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.CountDownTimer;
-import android.os.Handler;
-
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
@@ -47,6 +21,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -66,12 +42,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import in.co.rajkumaar.amritarepo.R;
+import in.co.rajkumaar.amritarepo.activities.BaseActivity;
 import in.co.rajkumaar.amritarepo.helpers.Utils;
 
-public class PublicTransportsActivity extends AppCompatActivity {
+public class PublicTransportsActivity extends BaseActivity {
 
     private String type;
     private int flag;
@@ -82,8 +60,8 @@ public class PublicTransportsActivity extends AppCompatActivity {
     private TextView nextTrainBus;
     private TextView countdownTimer;
     private ImageView trainBusImage;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
-    private SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE");
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+    private SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", Locale.getDefault());
 
 
     @Override
@@ -507,7 +485,7 @@ public class PublicTransportsActivity extends AppCompatActivity {
                 @Override
                 public View getView(int position, View convertView, @NonNull ViewGroup parent) {
                     if (convertView == null) {
-                        convertView = getLayoutInflater().inflate(R.layout.timing_item, null);
+                        convertView = getLayoutInflater().inflate(R.layout.timing_item, parent, false);
                     }
                     DataItem item = getItem(position);
                     ((TextView) convertView.findViewById(R.id.name)).setText(item.name);
@@ -591,8 +569,8 @@ public class PublicTransportsActivity extends AppCompatActivity {
         flag = 1;
         Date startTime = currentTime.getTime();
         Date endTime = trainTime.getTime();
-        long timediff = endTime.getTime() - startTime.getTime();
-        countdown(timediff);
+        long timeDiff = endTime.getTime() - startTime.getTime();
+        countdown(timeDiff);
     }
 
     private void countdown(long timeDiff) {
@@ -623,18 +601,12 @@ public class PublicTransportsActivity extends AppCompatActivity {
             }
 
             public void onFinish() {
-                countdownTimer.setText("Departed");
-                final Handler handler = new Handler();
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            loadData(type);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, 0);
+                countdownTimer.setText(R.string.departed);
+                try {
+                    loadData(type);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
 
             }
         }.start();
