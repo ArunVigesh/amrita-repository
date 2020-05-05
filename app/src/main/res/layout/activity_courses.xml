@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<?xml version="1.0" encoding="utf-8"?>
+<!--
   ~ Copyright (c) 2020 RAJKUMAR S
   -->
 
@@ -7,11 +8,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_centerHorizontal="true"
     android:background="?attr/colorBackground"
-    tools:context=".examschedule.ExamCategoryActivity">
-
+    android:id="@+id/res_holder"
+    tools:context=".aums.activities.CoursesActivity">
+    <ListView
+        android:id="@+id/courses_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="?attr/primaryTextColor"
+        android:visibility="gone"
+        tools:context=".aums.activities.CourseActivity"/>
     <LinearLayout
-        android:id="@+id/loading_indicator"
+        android:id="@+id/progressBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
@@ -19,7 +28,7 @@
         android:gravity="center"
         android:orientation="vertical">
 
-        <com.github.ybq.android.spinkit.SpinKitView
+        <com.github.ybq.android.spinkit.SpinKitView xmlns:app="http://schemas.android.com/apk/res-auto"
             style="@style/SpinKitView.Circle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -38,11 +47,4 @@
             android:textColor="?attr/primaryTextColor"
             tools:ignore="HardcodedText" />
     </LinearLayout>
-
-    <ListView
-        android:id="@+id/list"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:divider="?attr/primaryTextColor"
-        android:dividerHeight="1dp" />
 </RelativeLayout>
